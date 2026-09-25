@@ -11,5 +11,7 @@
            class="hover:underline {{ request()->routeIs('transactions.index') ? 'bg-slate-700 px-2 py-1 rounded' : '' }}">
             Transaksi
         </a>
+
+        <a href="{{ route('products.index') }}" class="hover:underline">Produk</a>
     </div>
 </nav>
