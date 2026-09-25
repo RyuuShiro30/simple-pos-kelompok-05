@@ -21,7 +21,7 @@ class TransactionController extends Controller
 
     public function index()
     {
-        $transactions = Transaction::with('details.product')
+        $transactions = Transaction::with(['details.product', 'user'])
             ->latest()
             ->paginate(15);
 
