@@ -11,6 +11,9 @@ class DashboardController extends Controller
 {
     public function __invoke(): View
     {
+        /**
+         * @var mixed
+         */
         $user = Auth::user();
 
         $todayTotal = Transaction::completed()
