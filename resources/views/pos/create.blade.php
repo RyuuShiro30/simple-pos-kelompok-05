@@ -1,51 +1,48 @@
 @extends('layouts.app')
+
 @section('title', 'Kasir')
+
 @section('content')
-    <h1 class="text-lg font-semibold mb-4">Transaksi Kasir</h1>
-    <div x-data="{
-            cart: [],
-            addToCart(id, name, price) {
-                this.cart.push({ id, name, price });
-                this.selectedProduct = id;
-            },
-            removeFromCart(id) {
-                this.cart = this.cart.filter(item => item.id !== id);
-            },
-            subtotal() {
-                return this.cart.reduce((sum, item) => sum + item.price, 0);
-            }
-        }">
-        <div class="grid grid-cols-3 gap-4">
+<div class="container my-4">
+    <h1 class="mb-4">Transaksi Kasir</h1>
+
+    {{-- Pesan Sukses --}}
+    @if (session('success'))
+        <div class="alert alert-success">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    {{-- Pesan Error Items --}}
+    @error('items')
+        <div class="alert alert-danger">
+            {{ $message }}
+        </div>
+    @error
+
+    {{-- Form Transaksi --}}
+    <form action="" method="POST">
+        @csrf
+
+        {{-- Daftar Produk --}}
+        <div class="row mb-4">
             @foreach ($products as $product)
-                <div class="border rounded-md p-3 cursor-pointer"
-                    :class="{ 'ring-2 ring-blue-500': selectedProduct === {{ $product->id }} }"
-                    @click="addToCart({{ $product->id }}, '{{ $product->name }}', {{ $product->price }})">
-                    <p class="font-medium">{{ $product->name }}</p>
-                    <p class="text-sm text-slate-500">Rp {{ number_format($product->price) }}</p>
-                    @if ($product->stock < 10)
-                        <span class="inline-block mt-2 text-xs px-2 py-1 rounded-md bg-amber-100 text-amber-700">Stok Menipis</span>
-                    @endif
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ $product->name }}</h5>
+                            <p class="card-text">Rp {{ number_format($product->price, 0, ',', '.') }}</p>
+                        </div>
+                    </div>
                 </div>
             @endforeach
         </div>
 
-        <div class="mt-4">
-            {{ $products->links() }}
+        {{-- Ringkasan & Pembayaran --}}
+        <div class="card p-3">
+            <h4 class="mb-3">Subtotal: Rp <span id="subtotal">0</span></h4>
+            <button type="submit" class="btn btn-primary">Bayar</button>
         </div>
-        
-        <div class="mt-4 border-t pt-3">
-            <template x-for="item in cart" :key="item.id">
-                <div class="flex items-center justify-between py-1 border-b border-gray-100 last:border-0">
-                    <p x-text="item.name + ' - Rp ' + item.price"></p>
-
-                    <button type="button"
-                        @click="removeFromCart(item.id)"
-                        class="text-xs text-red-500 hover:text-red-700 font-medium-px-2 py-1 bg-red-50 hover:bg-red-100 rounded">
-                        Hapus
-                    </button> 
-                </div>
-            </template>
-            <p class="font-semibold mt-2">Subtotal: Rp <span x-text="subtotal()"></span></p>
-        </div>
-    </div>
+    </form>
+</div>
 @endsection
