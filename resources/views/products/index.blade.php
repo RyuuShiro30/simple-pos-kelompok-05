@@ -6,6 +6,14 @@
     <div class="container">
         <h1 class="text-lg font-semibold mb-4">Daftar Produk</h1>
 
+                @if (session('success'))
+            <div class="bg-green-50 text-green-700 p-3 rounded-md mb-4">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        <a href="{{ route('products.create') }}" class="inline-block mb-4 bg-blue-600 text-white px-4 py-2 rounded-md">Tambah Produk</a>
+
         <table class="w-full text-left border-collapse">
             <thead>
                 <tr class="border-b">
