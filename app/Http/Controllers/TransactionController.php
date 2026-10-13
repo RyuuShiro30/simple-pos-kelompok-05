@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreTransactionRequest;
 use App\Models\Product;
 use App\Models\Transaction;
-use App\Http\Requests\StoreTransactionRequest;
 use App\Models\TransactionDetail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class TransactionController extends Controller
 {
@@ -31,9 +32,20 @@ class TransactionController extends Controller
             $total = 0;
 
             foreach ($validated['items'] as $item) {
-                $product  = Product::findOrFail($item['product_id']);
+                // Ambil produk dan kunci barisnya selama transaksi berlangsung
+                $product = Product::where('id', $item['product_id'])
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                // Periksa apakah stok mencukupi
+                if ((int) $item['qty'] > $product->stock) {
+                    throw ValidationException::withMessages([
+                        'items' => "Stok produk {$product->name} tidak mencukupi. Stok tersedia: {$product->stock}.",
+                    ]);
+                }
+
                 $subtotal = $product->price * $item['qty'];
-                $total   += $subtotal;
+                $total += $subtotal;
 
                 TransactionDetail::create([
                     'transaction_id' => $transaction->id,
@@ -43,7 +55,10 @@ class TransactionController extends Controller
                 ]);
             }
 
-            $transaction->update(['total' => $total]);
+            // Simpan total transaksi
+            $transaction->update([
+                'total' => $total,
+            ]);
         });
 
         return redirect()
@@ -64,5 +79,4 @@ class TransactionController extends Controller
     {
         return "Detail transaksi #{$id}";
     }
-
 }
