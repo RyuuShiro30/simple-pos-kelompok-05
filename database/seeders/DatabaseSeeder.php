@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(DemoUserSeeder::class);
         $now = now();
 
         // 1. Buat User
