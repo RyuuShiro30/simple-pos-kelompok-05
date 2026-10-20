@@ -89,3 +89,20 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 - Login berhasil.
 - Kasir tidak memiliki akses ke halaman `/products`.
 - Sistem menampilkan halaman **403 Forbidden / akses ditolak**.
+
+### 3. Pengujian sebagai Manager
+
+**Langkah:**
+
+1. Buka halaman login.
+2. Masukkan akun manager.
+3. Login ke sistem.
+4. Buka halaman `/transactions`.
+5. Buka halaman `/products`.
+
+**Hasil yang diharapkan:**
+
+- Login berhasil.
+- Manager dapat mengakses halaman `/transactions`.
+- Manager tidak dapat mengakses halaman `/products`.
+- Saat membuka `/products`, sistem menampilkan halaman 403 / akses ditolak.
