@@ -57,3 +57,52 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Skenario Pengujian Manual RBAC
+
+### 1. Pengujian sebagai Admin
+
+**Langkah:**
+
+1. Buka halaman login.
+2. Masukkan akun admin.
+3. Login ke sistem.
+4. Buka halaman `/products`.
+
+**Hasil yang diharapkan:**
+
+- Login berhasil.
+- Admin dapat mengakses halaman `/products`.
+- Halaman produk tampil dengan normal.
+
+### 2. Pengujian sebagai Kasir
+
+**Langkah:**
+
+1. Buka halaman login.
+2. Masukkan akun kasir.
+3. Login ke sistem.
+4. Buka halaman `/products`.
+
+**Hasil yang diharapkan:**
+
+- Login berhasil.
+- Kasir tidak memiliki akses ke halaman `/products`.
+- Sistem menampilkan halaman **403 Forbidden / akses ditolak**.
+
+### 3. Pengujian sebagai Manager
+
+**Langkah:**
+
+1. Buka halaman login.
+2. Masukkan akun manager.
+3. Login ke sistem.
+4. Buka halaman `/transactions`.
+5. Buka halaman `/products`.
+
+**Hasil yang diharapkan:**
+
+- Login berhasil.
+- Manager dapat mengakses halaman `/transactions`.
+- Manager tidak dapat mengakses halaman `/products`.
+- Saat membuka `/products`, sistem menampilkan halaman 403 / akses ditolak.
