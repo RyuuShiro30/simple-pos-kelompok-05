@@ -106,3 +106,28 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 - Manager dapat mengakses halaman `/transactions`.
 - Manager tidak dapat mengakses halaman `/products`.
 - Saat membuka `/products`, sistem menampilkan halaman 403 / akses ditolak.
+
+## Proses yang Layak Dipindah ke Queued Job
+
+**Proses yang dipilih:** Export laporan penjualan ke Excel (SalesReportExport).
+
+**Kondisi sekarang:** Saat admin menekan tombol Export Excel, file dibuat langsung di request itu juga. Browser menunggu sampai file selesai dibuat baru bisa download.
+
+**Alasan layak dipindah ke queue:**
+1. Lambat kalau data besar. Semakin banyak transaksi, semakin lama file dibuat, dan bisa melewati batas waktu PHP.
+2. Pengguna tidak perlu hasilnya seketika. Admin cukup diberi tahu bahwa laporan sedang dibuat, lalu mengambilnya setelah selesai.
+3. Aman diulang. Kalau gagal, job bisa dicoba lagi lewat $tries dan $backoff tanpa merusak data, karena proses ini hanya membaca data dan membuat file.
+4. Tidak menahan pengguna lain. Proses berat jalan di worker, jadi server tetap responsif untuk kasir yang sedang transaksi.
+
+**Cara kerja yang diusulkan:**
+1. Admin klik Export Excel, aplikasi mengirim job ke queue dan langsung menampilkan pesan "Laporan sedang diproses".
+2. Worker membuat file dan menyimpannya di storage.
+3. Admin mendapat link download setelah file siap.
+
+**Hal yang perlu diperhatikan:**
+- Perlu tempat menyimpan status dan lokasi file (misalnya tabel export_files).
+- Perlu cara memberi tahu admin saat file siap (notifikasi atau halaman daftar export).
+- File lama perlu dibersihkan secara berkala.
+- Worker harus berjalan (php artisan queue:work), dan pakai QUEUE_CONNECTION=database.
+
+**Proses lain yang tidak perlu di-queue:** Menyimpan transaksi di kasir tetap harus langsung (sinkron), karena kasir butuh kepastian transaksi berhasil dan stok langsung berkurang saat itu juga.
