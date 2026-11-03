@@ -11,24 +11,85 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('import.store') }}" enctype="multipart/form-data" class="max-w-md">
-        @csrf
-        
-        <label class="block mb-3">
-            <span class="text-sm font-medium">File CSV</span>
-            <input type="file" name="csv" accept=".csv" class="mt-1 block w-full text-sm">
-            
-            @error('csv')
-                <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
-            @enderror
-        </label>
+    {{-- Import Manual --}}
+    <div class="mb-8">
+        <h2 class="text-lg font-semibold mb-4">Import Manual</h2>
 
-        <p class="text-xs text-slate-500 mb-3">
-            Column yang dibutuhkan: <code>name</code>, <code>category_id</code>, <code>price</code>.
-        </p>
+        <form method="POST" action="{{ route('import.store') }}" enctype="multipart/form-data" class="max-w-md">
+            @csrf
 
-        <button type="submit" class="bg-slate-900 text-white px-4 py-2 rounded-md text-sm">
-            Import
-        </button>
-    </form>
+            <label class="block mb-3">
+                <span class="text-sm font-medium">File CSV</span>
+                <input
+                    type="file"
+                    name="csv"
+                    accept=".csv"
+                    class="mt-1 block w-full text-sm"
+                >
+
+                @error('csv')
+                    <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                @enderror
+            </label>
+
+            <p class="text-xs text-slate-500 mb-3">
+                Column yang dibutuhkan:
+                <code>name</code>,
+                <code>category_id</code>,
+                <code>price</code>.
+            </p>
+
+            <button
+                type="submit"
+                class="bg-slate-900 text-white px-4 py-2 rounded-md text-sm"
+            >
+                Import
+            </button>
+        </form>
+    </div>
+
+    {{-- Import Laravel Excel --}}
+    <div class="border-t pt-6">
+        <h2 class="text-lg font-semibold mb-4">
+            Import dengan Laravel Excel
+        </h2>
+
+        <form
+            method="POST"
+            action="{{ route('import.excel') }}"
+            enctype="multipart/form-data"
+            class="max-w-md"
+        >
+            @csrf
+
+            <label class="block mb-3">
+                <span class="text-sm font-medium">File CSV</span>
+
+                <input
+                    type="file"
+                    name="csv"
+                    accept=".csv"
+                    class="mt-1 block w-full text-sm"
+                >
+
+                @error('csv')
+                    <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                @enderror
+            </label>
+
+            <p class="text-xs text-slate-500 mb-3">
+                Menggunakan Laravel Excel dengan
+                <code>ToModel</code>,
+                <code>WithHeadingRow</code>, dan
+                <code>WithChunkReading</code>.
+            </p>
+
+            <button
+                type="submit"
+                class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm"
+            >
+                Import dengan Laravel Excel
+            </button>
+        </form>
+    </div>
 @endsection

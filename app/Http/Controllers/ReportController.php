@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\SalesReportExport;
+use App\Imports\ProductImport;
 use App\Jobs\ProcessProductImport;
 use App\Models\Category;
 use App\Models\Transaction;
@@ -26,11 +27,11 @@ class ReportController extends Controller
         $query = $this->filteredQuery($from, $to, $categoryId);
 
         return view('reports.index', [
-            'totalPenjualan'  => $query->sum('total'),
-            'jumlahTransaksi' => $query->count(),
-            'from'            => $from->toDateString(),
-            'to'              => $to->toDateString(),
-            'categories'      => Category::orderBy('name')->get(),
+            'totalPenjualan'   => $query->sum('total'),
+            'jumlahTransaksi'  => $query->count(),
+            'from'             => $from->toDateString(),
+            'to'               => $to->toDateString(),
+            'categories'       => Category::orderBy('name')->get(),
             'selectedCategory' => $categoryId,
         ]);
     }
@@ -50,7 +51,7 @@ class ReportController extends Controller
                     $t->id,
                     $t->created_at,
                     $t->user->name,
-                    $t->total
+                    $t->total,
                 ]);
             }
 
@@ -79,11 +80,11 @@ class ReportController extends Controller
         $query = $this->filteredQuery($from, $to, $categoryId);
 
         $pdf = Pdf::loadView('reports.pdf', [
-            'totalPenjualan'  => $query->sum('total'),
+            'totalPenjualan' => $query->sum('total'),
             'jumlahTransaksi' => $query->count(),
-            'transactions'    => $query->latest()->limit(50)->get(),
-            'from'            => $from->toDateString(),
-            'to'              => $to->toDateString(),
+            'transactions' => $query->latest()->limit(50)->get(),
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
         ]);
 
         return $pdf->download('laporan-penjualan.pdf');
@@ -104,19 +105,45 @@ class ReportController extends Controller
 
         ProcessProductImport::dispatch($path);
 
-        return back()->with('success', 'Import sedang diproses di background.');
+        return back()->with(
+            'success',
+            'Import sedang diproses di background.'
+        );
+    }
+
+    public function importExcel(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'csv' => ['required', 'file', 'mimes:csv,txt'],
+        ]);
+
+        Excel::import(
+            new ProductImport,
+            $request->file('csv')
+        );
+
+        return back()->with(
+            'success',
+            'Import menggunakan Laravel Excel berhasil diproses.'
+        );
     }
 
     private function resolveDateRange(Request $request): array
     {
-        $from = $request->date('from')?->startOfDay() ?? now()->startOfMonth();
-        $to   = $request->date('to')?->endOfDay() ?? now()->endOfDay();
+        $from = $request->date('from')?->startOfDay()
+            ?? now()->startOfMonth();
+
+        $to = $request->date('to')?->endOfDay()
+            ?? now()->endOfDay();
 
         return [$from, $to];
     }
 
-    private function filteredQuery($from, $to, $categoryId = null): Builder
-    {
+    private function filteredQuery(
+        $from,
+        $to,
+        $categoryId = null
+    ): Builder {
         return Transaction::with('user')
             ->whereBetween('created_at', [$from, $to])
             ->when($categoryId, function ($query) use ($categoryId) {
