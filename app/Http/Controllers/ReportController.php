@@ -70,7 +70,7 @@ class ReportController extends Controller
         $categoryId = $request->input('category_id');
         
         // Menggunakan TransactionDetail sesuai nama model di folder Models Anda
-        $topProducts = TransactionDetail::select('product_id', DB::raw('sum(quantity) as total_qty'))
+        $topProducts = TransactionDetail::select('product_id', DB::raw('sum(qty) as total_qty'))
             ->whereHas('transaction', function($q) use ($from, $to, $categoryId) {
                 $q->whereBetween('created_at', [$from, $to]);
                 if ($categoryId) {
