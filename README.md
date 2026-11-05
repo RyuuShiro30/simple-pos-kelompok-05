@@ -131,3 +131,10 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 - Worker harus berjalan (php artisan queue:work), dan pakai QUEUE_CONNECTION=database.
 
 **Proses lain yang tidak perlu di-queue:** Menyimpan transaksi di kasir tetap harus langsung (sinkron), karena kasir butuh kepastian transaksi berhasil dan stok langsung berkurang saat itu juga.
+
+## Analisis Queued Job Tambahan pada Simple POS
+Selain proses **Import Produk**, proses lain di aplikasi Simple POS yang sangat layak dipindah ke **Queued Job** adalah **Pengiriman Nota/Struk Transaksi via Email kepada Pelanggan**.
+
+**Alasan Pemindahan:**
+1. **Performa Kasir (User Experience):** Proses pengiriman email melalui SMTP eksternal sering kali memakan waktu beberapa detik (latency). Jika dijalankan secara *sync*, kasir harus menunggu koneksi email selesai sebelum halaman transaksi sukses dimuat ulang, memperlambat proses pelayanan di kasir.
+2. **Keandalan (Reliability):** Jika server email tujuan mengalami gangguan (*timeout* atau *down*), proses *sync* akan menyebabkan error HTTP 500 pada aplikasi POS. Dengan menggunakan Queue, jika pengiriman email gagal, job dapat diatur dengan fitur `$tries` dan `$backoff` untuk dikirim ulang secara otomatis di background tanpa mengganggu transaksi kasir
