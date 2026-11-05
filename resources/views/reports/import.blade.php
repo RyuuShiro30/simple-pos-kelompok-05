@@ -92,4 +92,57 @@
             </button>
         </form>
     </div>
+
+    {{-- Riwayat Error Import --}}
+    <div class="border-t pt-6 mt-8">
+        <h2 class="text-lg font-semibold mb-4">
+            Riwayat Baris Import yang Gagal
+        </h2>
+
+        @if ($importErrors->isNotEmpty())
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 text-left">
+                            <th class="border p-3">No.</th>
+                            <th class="border p-3">Nama File</th>
+                            <th class="border p-3">Baris CSV</th>
+                            <th class="border p-3">Pesan Error</th>
+                            <th class="border p-3">Waktu</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach ($importErrors as $index => $error)
+                            <tr>
+                                <td class="border p-3">
+                                    {{ $index + 1 }}
+                                </td>
+
+                                <td class="border p-3">
+                                    {{ $error->file_name }}
+                                </td>
+
+                                <td class="border p-3">
+                                    {{ $error->row_number }}
+                                </td>
+
+                                <td class="border p-3 text-red-600">
+                                    {{ $error->error_message }}
+                                </td>
+
+                                <td class="border p-3">
+                                    {{ $error->created_at->format('d-m-Y H:i') }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <p class="text-sm text-slate-500">
+                Belum ada data error import.
+            </p>
+        @endif
+    </div>
 @endsection
