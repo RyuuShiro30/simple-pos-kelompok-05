@@ -6,6 +6,7 @@ use App\Exports\SalesReportExport;
 use App\Imports\ProductImport;
 use App\Jobs\ProcessProductImport;
 use App\Models\Category;
+use App\Models\ImportError;
 use App\Models\Transaction;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -92,7 +93,9 @@ class ReportController extends Controller
 
     public function importForm(): View
     {
-        return view('reports.import');
+        $importErrors = ImportError::latest()->get();
+
+        return view('reports.import', compact('importErrors'));
     }
 
     public function import(Request $request): RedirectResponse
