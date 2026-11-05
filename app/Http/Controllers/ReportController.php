@@ -3,16 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Exports\SalesReportExport;
-use App\Imports\ProductImport;
-use App\Jobs\ProcessProductImport;
-use App\Models\Category;
-use App\Models\ImportError;
+use App\Models\Product;
 use App\Models\Transaction;
+use App\Models\TransactionDetail;
+use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -23,16 +23,16 @@ class ReportController extends Controller
     public function index(Request $request): View
     {
         [$from, $to] = $this->resolveDateRange($request);
-        $categoryId = $request->input('category_id');
-
+        $categoryId = $request->get('category_id');
+        
         $query = $this->filteredQuery($from, $to, $categoryId);
 
         return view('reports.index', [
-            'totalPenjualan'   => $query->sum('total'),
-            'jumlahTransaksi'  => $query->count(),
-            'from'             => $from->toDateString(),
-            'to'               => $to->toDateString(),
-            'categories'       => Category::orderBy('name')->get(),
+            'totalPenjualan' => $query->sum('total'),
+            'jumlahTransaksi' => $query->count(),
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'categories' => \App\Models\Category::all(),
             'selectedCategory' => $categoryId,
         ]);
     }
@@ -40,22 +40,15 @@ class ReportController extends Controller
     public function exportCsv(Request $request): StreamedResponse
     {
         [$from, $to] = $this->resolveDateRange($request);
-        $categoryId = $request->input('category_id');
+        $categoryId = $request->get('category_id');
         $query = $this->filteredQuery($from, $to, $categoryId);
 
         return response()->streamDownload(function () use ($query) {
             $out = fopen('php://output', 'w');
             fputcsv($out, ['ID', 'Tanggal', 'Kasir', 'Total']);
-
             foreach ($query->lazyById() as $t) {
-                fputcsv($out, [
-                    $t->id,
-                    $t->created_at,
-                    $t->user->name,
-                    $t->total,
-                ]);
+                fputcsv($out, [$t->id, $t->created_at, $t->user->name, $t->total]);
             }
-
             fclose($out);
         }, 'laporan-penjualan.csv');
     }
@@ -63,12 +56,10 @@ class ReportController extends Controller
     public function exportExcel(Request $request): BinaryFileResponse
     {
         [$from, $to] = $this->resolveDateRange($request);
-        $categoryId = $request->input('category_id');
-
+        $categoryId = $request->get('category_id');
+        
         return Excel::download(
-            new SalesReportExport(
-                $this->filteredQuery($from, $to, $categoryId)
-            ),
+            new SalesReportExport($this->filteredQuery($from, $to, $categoryId)),
             'laporan-penjualan.xlsx'
         );
     }
@@ -77,13 +68,28 @@ class ReportController extends Controller
     {
         [$from, $to] = $this->resolveDateRange($request);
         $categoryId = $request->input('category_id');
-
-        $query = $this->filteredQuery($from, $to, $categoryId);
+        
+        // Menggunakan TransactionDetail sesuai nama model di folder Models Anda
+        $topProducts = TransactionDetail::select('product_id', DB::raw('sum(quantity) as total_qty'))
+            ->whereHas('transaction', function($q) use ($from, $to, $categoryId) {
+                $q->whereBetween('created_at', [$from, $to]);
+                if ($categoryId) {
+                    $q->whereHas('items.product', function ($subq) use ($categoryId) {
+                        $subq->where('category_id', $categoryId);
+                    });
+                }
+            })
+            ->groupBy('product_id')
+            ->orderByDesc('total_qty')
+            ->limit(5)
+            ->with('product')
+            ->get();
 
         $pdf = Pdf::loadView('reports.pdf', [
-            'totalPenjualan' => $query->sum('total'),
-            'jumlahTransaksi' => $query->count(),
-            'transactions' => $query->latest()->limit(50)->get(),
+            'totalPenjualan' => $this->filteredQuery($from, $to, $categoryId)->sum('total'),
+            'jumlahTransaksi' => $this->filteredQuery($from, $to, $categoryId)->count(),
+            'transactions' => $this->filteredQuery($from, $to, $categoryId)->latest()->limit(50)->get(),
+            'topProducts' => $topProducts,
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
         ]);
@@ -93,66 +99,82 @@ class ReportController extends Controller
 
     public function importForm(): View
     {
-        $importErrors = ImportError::latest()->get();
-
-        return view('reports.import', compact('importErrors'));
+        return view('reports.import');
     }
 
+    // Tantangan Mandiri 2: Menyimpan row yang gagal di-import
     public function import(Request $request): RedirectResponse
     {
         $request->validate([
             'csv' => ['required', 'file', 'mimes:csv,txt'],
         ]);
 
-        $path = $request->file('csv')->store('imports');
+        $lines = file($request->file('csv')->getRealPath(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $rows = array_map('str_getcsv', $lines);
+        $header = array_shift($rows);
 
-        ProcessProductImport::dispatch($path);
+        $created = 0;
+        $updated = 0;
+        $failures = [];
 
-        return back()->with(
-            'success',
-            'Import sedang diproses di background.'
-        );
-    }
+        foreach ($rows as $index => $row) {
+            $rowNumber = $index + 2;
 
-    public function importExcel(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'csv' => ['required', 'file', 'mimes:csv,txt'],
-        ]);
+            if (count($row) !== count($header)) {
+                $failures[] = "Baris #{$rowNumber}: Jumlah kolom tidak sesuai dengan header.";
+                continue;
+            }
 
-        Excel::import(
-            new ProductImport,
-            $request->file('csv')
-        );
+            $validator = Validator::make(array_combine($header, $row), [
+                'name' => ['required', 'string'],
+                'category_id' => ['required', 'exists:categories,id'],
+                'price' => ['required', 'integer', 'min:0'],
+            ]);
 
-        return back()->with(
-            'success',
-            'Import menggunakan Laravel Excel berhasil diproses.'
-        );
+            if ($validator->fails()) {
+                $errors = implode(', ', $validator->errors()->all());
+                $failures[] = "Baris #{$rowNumber}: {$errors}";
+                continue;
+            }
+
+            $data = $validator->validated();
+
+            $product = Product::updateOrCreate(
+                ['name' => $data['name'], 'category_id' => $data['category_id']],
+                ['price' => $data['price']]
+            );
+
+            if ($product->wasRecentlyCreated) {
+                $created++;
+            } else {
+                $updated++;
+            }
+        }
+
+        return back()
+            ->with('success', "{$created} produk baru, {$updated} diperbarui.")
+            ->with('import_failures', $failures);
     }
 
     private function resolveDateRange(Request $request): array
     {
-        $from = $request->date('from')?->startOfDay()
-            ?? now()->startOfMonth();
-
-        $to = $request->date('to')?->endOfDay()
-            ?? now()->endOfDay();
+        $from = $request->date('from')?->startOfDay() ?? now()->startOfMonth();
+        $to = $request->date('to')?->endOfDay() ?? now()->endOfDay();
 
         return [$from, $to];
     }
 
-    private function filteredQuery(
-        $from,
-        $to,
-        $categoryId = null
-    ): Builder {
-        return Transaction::with('user')
-            ->whereBetween('created_at', [$from, $to])
-            ->when($categoryId, function ($query) use ($categoryId) {
-                $query->whereHas('details.product', function ($productQuery) use ($categoryId) {
-                    $productQuery->where('category_id', $categoryId);
-                });
+    private function filteredQuery($from, $to, $categoryId = null): Builder
+    {
+        $query = Transaction::with('user')
+            ->whereBetween('created_at', [$from, $to]);
+
+        if ($categoryId) {
+            $query->whereHas('items.product', function ($q) use ($categoryId) {
+                $q->where('category_id', $categoryId);
             });
+        }
+
+        return $query;
     }
 }
