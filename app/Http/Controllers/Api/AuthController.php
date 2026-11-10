@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -15,12 +14,18 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        if (! Auth::attempt($credentials)) {
+        if (!Auth::attempt($credentials)) {
             return response()->json(['message' => 'Kredensial tidak valid.'], 401);
         }
 
+        /** @var \App\Models\User $user */
         $user = Auth::user();
-        $token = $user->createToken('mobile-kasir')->plainTextToken;
+
+        $token = $user->createToken(
+            'mobile-kasir',
+            ['products:read', 'transactions:create', 'transactions:read'],
+            now()->addDay()
+        )->plainTextToken;
 
         return response()->json(['token' => $token]);
     }
@@ -28,7 +33,6 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-
         return response()->json(['message' => 'Logout berhasil.']);
     }
 }
