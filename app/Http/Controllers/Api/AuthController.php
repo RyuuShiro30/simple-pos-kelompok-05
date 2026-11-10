@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -23,7 +24,12 @@ class AuthController extends Controller
 
         $token = $user->createToken(
             'mobile-kasir',
-            ['products:read', 'transactions:create', 'transactions:read'],
+            [
+                'products:read',
+                'categories:read',
+                'transactions:create',
+                'transactions:read'
+            ],
             now()->addDay()
         )->plainTextToken;
 
@@ -33,6 +39,7 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
+
         return response()->json(['message' => 'Logout berhasil.']);
     }
 }
