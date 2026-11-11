@@ -51,7 +51,7 @@ class ApiTransactionTest extends TestCase
      */
     public function test_guest_cannot_create_transaction(): void
     {
-        $response = $this->postJson('/api/transactions', [
+        $response = $this->postJson('/api/v1/transactions', [
             'items' => [],
         ], [
             'Idempotency-Key' => 'guest-test-key',
@@ -69,7 +69,7 @@ class ApiTransactionTest extends TestCase
 
         Sanctum::actingAs($user, ['transactions:read']);
 
-        $response = $this->postJson('/api/transactions', [
+        $response = $this->postJson('/api/v1/transactions', [
             'items' => [],
         ], [
             'Idempotency-Key' => 'wrong-ability-key',
@@ -87,7 +87,7 @@ class ApiTransactionTest extends TestCase
 
         Sanctum::actingAs($user, ['transactions:create']);
 
-        $response = $this->postJson('/api/transactions', [
+        $response = $this->postJson('/api/v1/transactions', [
             'items' => [
                 [
                     'product_id' => 999999,
@@ -130,7 +130,7 @@ class ApiTransactionTest extends TestCase
         ];
 
         $firstResponse = $this->postJson(
-            '/api/transactions',
+            '/api/v1/transactions',
             $payload,
             $headers
         );
@@ -139,7 +139,7 @@ class ApiTransactionTest extends TestCase
             ->assertJsonPath('data.total', 30000);
 
         $secondResponse = $this->postJson(
-            '/api/transactions',
+            '/api/v1/transactions',
             $payload,
             $headers
         );
@@ -172,7 +172,7 @@ class ApiTransactionTest extends TestCase
         Sanctum::actingAs($otherCashier, ['transactions:read']);
 
         $response = $this->getJson(
-            "/api/transactions/{$transactionId}"
+            "/api/v1/transactions/{$transactionId}"
         );
 
         $response->assertForbidden();
@@ -180,7 +180,7 @@ class ApiTransactionTest extends TestCase
         Sanctum::actingAs($owner, ['transactions:read']);
 
         $ownerResponse = $this->getJson(
-            "/api/transactions/{$transactionId}"
+            "/api/v1/transactions/{$transactionId}"
         );
 
         $ownerResponse->assertOk();
