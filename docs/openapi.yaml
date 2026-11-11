@@ -12,7 +12,7 @@ servers:
     description: Local Development Server
 
 paths:
-  /api/login:
+ /api/v1/login:
     post:
       operationId: login
       summary: Login dan mendapatkan token
