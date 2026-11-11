@@ -321,3 +321,17 @@ components:
       type: http
       scheme: bearer
       bearerFormat: Sanctum Token
+
+# ====================================================================
+# TANTANGAN MANDIRI 7: Ulasan Pengalaman Menggunakan Postman vs cURL
+# ====================================================================
+# Menguji API menggunakan antarmuka GUI seperti Postman atau Insomnia 
+# memberikan pengalaman yang jauh lebih mudah dan intuitif dibandingkan 
+# menggunakan perintah cURL di terminal. Pada Postman, manajemen header 
+# (seperti Bearer Token untuk otorisasi dan Idempotency-Key) serta 
+# pengaturan request body JSON dapat diisi dengan mudah melalui tabel 
+# (key-value) yang rapi, sehingga meminimalisir kesalahan pengetikan 
+# tanda kutip atau backslash yang sangat sering terjadi saat mengetik 
+# cURL di terminal. Selain itu, response JSON dari server ditampilkan 
+# dengan indentasi dan penanda warna (syntax highlighting) yang jelas, 
+# membuat proses pelacakan error atau debugging menjadi lebih cepat.
