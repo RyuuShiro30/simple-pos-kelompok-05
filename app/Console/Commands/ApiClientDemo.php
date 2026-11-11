@@ -19,6 +19,20 @@ class ApiClientDemo extends Command
         $when = fn ($e) => $e instanceof ConnectionException || in_array($e->response->status(), [429, 502, 503, 504]);
         $backoff = fn (int $attempt) => $attempt * 1000;
 
+        $this->warn('>> Menguji percobaan login dengan sandi salah...');
+        $wrongLogin = Http::acceptJson()->post("{$baseUrl}/api/v1/login", [
+            'email' => 'kasir@pos.test',
+            'password' => 'password_salah_123', // Sengaja disalahkan
+        ]);
+
+        if ($wrongLogin->failed()) {
+            $this->error('Login ditolak (seperti yang diharapkan): ' . $wrongLogin->json('message'));
+            $this->line('>> Berhasil mencegat error 401. Aplikasi dicegah membaca token kosong.');
+            $this->newLine();
+        }
+        // ==========================================
+
+        // Login ulang dengan kredensial yang benar agar sisa demo bisa berjalan
         $login = Http::acceptJson()->post("{$baseUrl}/api/v1/login", [
             'email' => 'kasir@pos.test',
             'password' => 'password',
